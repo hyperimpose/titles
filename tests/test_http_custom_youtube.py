@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------
-# Copyright (C) 2023-2025 hyperimpose.org
+# Copyright (C) 2026 hyperimpose.org
 #
-# This file is part of minutia.
+# This file is part of titles.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -18,54 +18,65 @@
 
 import unittest
 
-import minutia  # type: ignore
+from starlette.testclient import TestClient
+from titles.webserver import app
 
 
-class CustomHttpYouTube(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
-        await minutia.init()
+class CustomHttpYouTube(unittest.TestCase):
+    def test_homepage(self):
+        u = "https://www.youtube.com"
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "YouTube")
 
-    async def asyncTearDown(self):
-        await minutia.terminate()
-
-    async def test_video(self):
+    def test_video(self):
         u = "https://www.youtube.com/watch?v=rdwz7QiG0lk"
-        r = await minutia.http.get(u)
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "YouTube on the tube! :: YouTube")
+            self.assertIsInstance(j["irc"], str)
 
-        self.assertEqual(r[0], "ok")
-
-        self.assertEqual(r[1]["@"], "http:youtube:video")
-        self.assertEqual(r[1]["t"], "YouTube on the tube!")
-
-        self.assertEqual(r[1]["title"], "YouTube on the tube!")
-        self.assertEqual(r[1]["author_name"], "YouTube")
-        self.assertEqual(r[1]["author_url"], "https://www.youtube.com/@YouTube")
-        self.assertEqual(r[1]["type"], "video")
-        self.assertEqual(r[1]["height"], 150)
-        self.assertEqual(r[1]["width"], 200)
-        self.assertEqual(r[1]["thumbnail_url"], "https://i.ytimg.com/vi/rdwz7QiG0lk/hqdefault.jpg")
-        self.assertEqual(r[1]["thumbnail_height"], 360)
-        self.assertEqual(r[1]["thumbnail_width"], 480)
-        self.assertIn("<iframe ", r[1]["html"])
-
-        self.assertEqual(r[1]["_ttl"], None)
-
-    async def test_m_video(self):
+    def test_m_video(self):
         u = "https://m.youtube.com/watch?v=rdwz7QiG0lk"
-        r = await minutia.http.get(u)
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "YouTube on the tube! :: YouTube")
+            self.assertIsInstance(j["irc"], str)
 
-        self.assertEqual(r[0], "ok")
-        self.assertEqual(r[1]["@"], "http:youtube:video")
+    def test_playlist(self):
+        u = "https://www.youtube.com/playlist?list=OLAK5uy_nnc_rabu3dWK3t7ECn1GS3y4ShnwMz_sY"  # noqa
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "The Theory Of")
 
-    async def test_search(self):
-        u = "https://www.youtube.com/results?search_query=Kelly+Moran+Helix"
-        r = await minutia.http.get(u)
+    def test_channel(self):
+        u = "https://www.youtube.com/@YouTube"
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "YouTube - YouTube")
 
-        self.assertEqual(r[0], "ok")
+    def test_music_homepage(self):
+        u = "https://music.youtube.com"
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "YouTube Music")
 
-        self.assertEqual(r[1]["@"], "http:youtube:search")
-        self.assertEqual(r[1]["t"], "Kelly Moran Helix - YouTube")
-
-        self.assertIsInstance(r[1]["results"], list)
-
-        self.assertGreater(r[1]["_ttl"], 0)
+    def test_music_playlist(self):
+        u = "https://music.youtube.com/playlist?list=RDCLAK5uy_ltlS29HmNHZb3oCsEjfXmZhIGaWpaDZck"  # noqa
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertEqual(j["t"], "'90s Dance")

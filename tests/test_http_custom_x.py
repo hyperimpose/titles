@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------
-# Copyright (C) 2023, 2025 hyperimpose.org
+# Copyright (C) 2026 hyperimpose.org
 #
-# This file is part of minutia.
+# This file is part of titles.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -18,43 +18,34 @@
 
 import unittest
 
-import minutia  # type: ignore
+from starlette.testclient import TestClient
+from titles.webserver import app
 
 
-class CustomHTTPX(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
-        await minutia.init()
-
-    async def asyncTearDown(self):
-        await minutia.terminate()
-
-    async def test_status(self):
+class CustomHTTPX(unittest.TestCase):
+    def test_status(self):
         u = "https://twitter.com/Google/status/1224134123519868932"
-        r = await minutia.http.get(u)
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            t = (
+                "A love story about the moments that matter most, told with a"
+                " little help from Google."
+                " #SuperBowlLIV  pic.twitter.com/JXbcKpGSH5"
+                " — Google (@Google) February 3, 2020"
+            )
+            self.assertEqual(r.json()["t"], t)
 
-        self.assertEqual(r[0], "ok")
-
-        self.assertEqual(r[1]["@"], "http:x")
-        self.assertEqual(
-            r[1]["t"],
-            ("A love story about the moments that matter most, told with a"
-             " little help from Google. #SuperBowlLIV"
-             "  pic.twitter.com/JXbcKpGSH5 — Google (@Google) February 3, 2020")
-        )
-
-        self.assertGreater(r[1]["_ttl"], 0)
-
-    async def test_profile(self):
+    def test_profile(self):
         u = "https://twitter.com/Google"
-        r = await minutia.http.get(u)
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json()["t"], "Posts by Google")
 
-        self.assertEqual(r[0], "ok")
-        self.assertEqual(r[1]["@"], "http:x")
-
-    async def test_photo(self):
+    def test_photo(self):
         u = "https://x.com/Google/status/1948434032645050665/photo/1"
-
-        r = await minutia.http.get(u)
-
-        self.assertEqual(r[0], "ok")
-        self.assertEqual(r[1]["@"], "http:x")
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            self.assertStartsWith(r.json()["t"], "Our latest shopping feature")

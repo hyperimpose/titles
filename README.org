@@ -1,104 +1,78 @@
 #+OPTIONS: ^:nil
 
-* minutia
+* titles
 
-minutia is a library for summarizing the content of various internet services.
-It uses a URL based interface. Each URL is mapped to a dictionary that contains data about the resource linked,
-such as its title, its filesize and more.
+A web service for describing the content of internet services. It takes in a url and returns a title.
 
 ** Features
 
 - Supported protocols: HTTP
 - Customized extraction mechanisms for various services.
-- Calculates a TTL value that can be used for caching.
 - Supports multiple languages.
 - Built with Python async.
 - Includes tests that can be used to ensure that each service is parsed properly.
 
+- [browser] Uses a real web browser through playwright as a fallback.
 - [media] Supports many content types: HTML, PDF, PNG, JPEG, MP3, ACC, FLAC and more.
 - [explicit] Detects explicit content using metadata and ML models.
 
+- External API for non-title responses.
+
 ** Usage
 
-Before this library can be used, it must be initialized. After initialization it can then be configured.
-When you are done using it, you should also terminate it.
+Install, configure and run the service (see below). Then you can make GET requests like the one below:
 
-Below is a simple example of how to use the library:
-#+BEGIN_SRC python
-  import asyncio
-  import minutia
-
-  async def main():
-      # Initialize
-      await minutia.init()
-
-      # Configure
-      minutia.set_lang("en-GB")
-      minutia.set_max_filesize(6_553_500)  # 6.5 MB in bytes
-
-      # Use the library
-      "ok", data = await minutia.http.get("http://hyperimpose.org")
-
-      # `data' will be a dictionary like:
-      # {
-      #     "@": "http:html",
-      #     "t": "This is the title of the page"
-      # }
-
-      # Terminate
-      await minutia.terminate()
-
-  asyncio.run(main())
+#+BEGIN_SRC text
+  -> http://127.0.0.1:11557/title?u=https://google.com
+  <- {"t":"Google"}
 #+END_SRC
 
 ** Installation
 
+#+BEGIN_QUOTE
+Run the following steps inside a virtual environment. See: https://docs.python.org/3/library/venv.html
+#+END_QUOTE
+
 You can install this library using pip:
 #+BEGIN_SRC sh
-  pip install "git+https://github.com/hyperimpose/minutia.git@master"
+  pip install "git+https://github.com/hyperimpose/titles.git@master"
 #+END_SRC
 
-** Optional Dependencies
-Some of the features listed above are optional. You can tell pip which optional features you want installed
-by using the syntax ~[media,explicit]~ after the installation url:
+or you can clone it:
+#+BEGIN_SRC sh
+  git clone https://github.com/hyperimpose/titles.git
+  cd titles
+  pip install -e .
+#+END_SRC
+
+
+*** Optional Dependencies
+Some of the features above are optional. You can tell pip which features you want by using the syntax
+~[media,explicit]~ after the installation url:
 
 #+BEGIN_SRC sh
-  pip install "git+https://github.com/hyperimpose/minutia.git@master"[media]
+  pip install "git+https://github.com/hyperimpose/titles.git@master"[browser,explicit,media]
 #+END_SRC
 
-The availability of those dependencies is checked once when minutia is imported.
+The availability of those dependencies is checked once when titles is imported.
 When an optional dependency is missing the library will log a warning to inform you about the fact.
 
 Table of available optional features:
-|----------+-----------------------------------------------------|
-| Name     | Description                                         |
-|----------+-----------------------------------------------------|
-| media    | Extract extra information from various media files. |
-| explicit | See [[#explicit][Explicit]].                                       |
-|----------+-----------------------------------------------------|
+|----------+-----------------------------------------------------------|
+| Name     | Description                                               |
+|----------+-----------------------------------------------------------|
+| browser  | Use a real web browser as a fallback to get more results. |
+| media    | Extract extra information from various media files.       |
+| explicit | Use a local AI model to detect explicit media             |
+|----------+-----------------------------------------------------------|
 
-*** Explicit
-The library is able to detect explicit content using a Machine Learning (ML) model.
-To run the ML model, tensorflow and other dependencies need to be installed which has the following caveats:
-- Increased installation size.
-- When the code is started for the first time it will need to download and cache the ML model.
-- *Tensorflow requires a CPU with AVX support*
-  - If this requirement is not met the program will crash and show this message: ~Illegal Instruction~.
+**** Browser installation
+If you install with the browser option, you will need to also install firefox through playwright:
+#+BEGIN_SRC sh
+  playwright install firefox
+#+END_SRC
 
-To avoid those issues this feature is provided through a secondary service. The library can then be configured,
-at runtime, to connect to that service over a unix socket.
-
-An example workflow to use this feature:
-- Do NOT use the ~explicit~ flag when installing minutia as a library for your project.
-  - This keeps the size of the library relatively small.
-- Create a new venv, clone this repo and install the library with the ~explicit~ flag.
-  - Install with: ~pip install ./minutia[explicit]~
-  - Run ~python minutia explicit -u /tmp/your_path_here.sock~ to start the service.
-    - CAUTION: the file path given after the -u option will be replaced on startup.
-- After initializing the library in your code setup the explicit client:
-  - Add this code: ~await minutia.setup_explicit_unix_socket("/tmp/your_path_here.sock")~
-
-**** Video support
+**** Explicit video detection
 The explicit service can provide video support. Some extra runtime dependencies are needed for this to work.
 The availability of those dependencies is checked once when the service is started.
 When a runtime dependency is missing the library will log a warning to inform you about the fact. 
@@ -111,87 +85,52 @@ Table of extra runtime dependencies:
 | ffprobe | MUST be installed with ~ffmpeg~.      |
 |---------+---------------------------------------|
 
+** Running
+
+After installing the library you can run it either as a module:
+
+#+BEGIN_SRC sh
+  python -m titles
+#+END_SRC
+
+or from the project's root directory:
+
+#+BEGIN_SRC sh
+  python titles
+#+END_SRC
+
+*** Configuration
+
+The service can load configuration options either from the environment or a ~.env~ file.
+
+Read [[./titles/config.py][config.py]] for the available configuration options.
+
 ** API
 
-*** minutia
+Only GET methods are provided. They return JSON values:
 
-**** Initialization / Termination
-
-|-------------------+-----------------------|
-| Callable          | Description           |
-|-------------------+-----------------------|
-| async init()      | Intialize the library |
-| async terminate() | Terminate the library |
-|-------------------+-----------------------|
-
-**** Configuration
-
-|-----------------------------+------------------------------------------------------------+---------|
-| Callable                    | Description                                                | Default |
-|-----------------------------+------------------------------------------------------------+---------|
-| set_http_useragent(ua: str) | The useragent to use when making HTTP requests.            |         |
-| set_lang(lang: str)         | The default language to request content in. The value      | "en"    |
-|                             | is passed in HTTP headers such as Accept-Language.         |         |
-| set_max_filesize(i: int)    | The max number of bytes to download for deep inspecion of  | 14_600  |
-|                             | supported media files. Set to <= 0 to disable the feature. |         |
-| set_max_htmlsize(i: int)    | The max bytes to download when parsing HTML pages.         | 14_600  |
-|-----------------------------+------------------------------------------------------------+---------|
-
-**** Setup
-
-|---------------------------------------------+-------------------------------------------------+---------|
-| Callable                                    | Description                                     | Default |
-|---------------------------------------------+-------------------------------------------------+---------|
-| async setup_explicit_unix_socket(path: str) | Path to the explicit service. When called a new | ""      |
-|                                             | client is started. "" disables the feature.     |         |
-|---------------------------------------------+-------------------------------------------------+---------|
-
-*** minutia.http
-
-This module is used when working with HTTP/HTTPS links.
-
-|--------------------------------------+--------------------------------------------------------------|
-| Callable                             | Description                                                  |
-|--------------------------------------+--------------------------------------------------------------|
-| async get(link: str, lang: str = "") | Visit the link and return information about it. If `lang' is |
-|                                      | given then it will be used instead of the default lang set.  |
-|--------------------------------------+--------------------------------------------------------------|
-
-*** Logging
-
-minutia is using the ~logging~ module to log various events. Everything is logged under the ~minutia~
-logger.
-
-When the library is imported it might log information about the availability of various features. If you want
-to capture those you must configure logging in your application before importing minutia.
+|-----------------+--------------------------------------------+----------------------------------------------|
+| Path            | Parameters                                 | Returns                                      |
+|                 |                                            |                                              |
+|-----------------+--------------------------------------------+----------------------------------------------|
+| /title          | u: The url to retrieve the title for       | An object. See the Title class in [[./titles/common.py][common.py]]. |
+|                 | (optional) lang: An Accept-Language header |                                              |
+|-----------------+--------------------------------------------+----------------------------------------------|
+| /duckduckgo     | q: The query to search for                 | A list of objects. See [[./titles/as_http/external/duckduckgo.py][duckduckgo.py]].        |
+|-----------------+--------------------------------------------+----------------------------------------------|
+| /youtube/search | q: The query to search for                 | A list of objects. See [[./titles/as_http/external/youtube.py][youtube.py]]            |
+|                 | (optional) lang: An Accept-Language header |                                              |
+|-----------------+--------------------------------------------+----------------------------------------------|
 
 ** Developer Notes
 
-The library has an extra installation option ~dev~ to be used during development. It is built using Flit.
-
-You can setup a development environment with all the dependencies by running the following:
-#+BEGIN_SRC sh
-  python -m venv venv
-  source venv/bin/activate
-  pip install flit
-  flit install
-#+END_SRC
-
-*** Project Structure
-This project provides both a library for use in other python projects and standalone services to provide
-extra features to the library.
-
-#+BEGIN_SRC
-  /minutia            The library to import in other programs
-  /services/explicit  The explicit service
-  /__main__.py        Magic module to start the services from the CLI
-#+END_SRC
+The library has an extra installation option ~dev~ to be used during development.
 
 ** License
 
-minutia is licensed under the [[https://www.gnu.org/licenses/agpl-3.0.html][GNU Affero General Public License version 3 (AGPLv3)]].
+titles is licensed under the [[https://www.gnu.org/licenses/agpl-3.0.html][GNU Affero General Public License version 3 (AGPLv3)]].
 #+BEGIN_CENTER
 [[https://www.gnu.org/graphics/agplv3-with-text-162x68.png]]
 #+END_CENTER
 
-A copy of this license is included in the file [[../../COPYING][COPYING]].
+A copy of this license is included in the file [[./COPYING][COPYING]].

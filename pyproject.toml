@@ -3,12 +3,12 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "minutia"
+name = "titles"
 dynamic = ["version", "description"]
 authors = [{name = "hyperimpose.org", email = "hyperimpose@protonmail.com"}]
 requires-python = ">=3.11"
 license = {file = "COPYING"}
-keywords = ["minutia", "minutiae", "hyperimpose", "url", "api", "metadata", "link", "title"]
+keywords = ["titles", "hyperimpose", "url", "api", "metadata", "link", "title", "website", "http"]
 classifiers = [
             "Development Status :: 4 - Beta",
             "Intended Audience :: Developers",
@@ -18,17 +18,26 @@ classifiers = [
             "Topic :: Internet :: WWW/HTTP"
 ]
 dependencies = [
-             "httpx",
+             "async_lru",
              "html5lib",
-             "imagesize"
+             "imagesize",
+             "msgspec",
+             "niquests",
+             "starlette",
+             "uvicorn[standard]"
 ]
 
 [project.optional-dependencies]
 dev = [
     "flake8",
     "mypy",
+    "pylsp-mypy",
+    "python-lsp-server[all]",
     "types-html5lib",
     "types-Pillow"
+]
+browser = [
+        "playwright"
 ]
 media = [
       "pymediainfo",
@@ -36,12 +45,12 @@ media = [
       "pillow"
 ]
 explicit = [
-         "opennsfw2",
-         "tensorflow",
-         "pillow",
-         "numpy"
+         "huggingface_hub",
+         "numpy",
+         "onnxruntime",
+         "pillow"
 ]
 
 [project.urls]
-Home = "https://hyperimpose.org/minutia"
-Source = "https://github.com/hyperimpose/minutia"
+Home = "https://github.com/hyperimpose/titles"
+Source = "https://github.com/hyperimpose/titles"

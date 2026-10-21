@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------
-# Copyright (C) 2023-2024 hyperimpose.org
+# Copyright (C) 2026 hyperimpose.org
 #
-# This file is part of minutia.
+# This file is part of titles.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -18,43 +18,29 @@
 
 import unittest
 
-import minutia  # type: ignore
+from starlette.testclient import TestClient
+from titles.webserver import app
 
 
-class CustomHTTPLainchan(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
-        await minutia.init()
-
-    async def asyncTearDown(self):
-        await minutia.terminate()
-
-    async def test_thread(self):
+class CustomHTTPLainchan(unittest.TestCase):
+    def test_thread(self):
         u = "https://lainchan.org/%CE%BB/res/1.html"
-        r = await minutia.http.get(u)
-        self.assertEqual(r[0], "ok")
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json()["t"], "The Sticky: /λ/ 2.0")
+            irc = (
+                "\x0309lainchan\x0f \x0306/%CE%BB/\x0f The Sticky: /λ/ 2.0"
+                " \x02->\x0f \x0302This is new /λ/, also addressable as"
+                " /lambda/, the programming board.  The intent is that this"
+                " board will be used to share and discuss programs that"
+                " h...\x0f | \x02Replies:\x0f 0 - \x02Files:\x0f 1"
+            )
+            self.assertEqual(r.json()["irc"], irc)
 
-        self.assertEqual(r[1]["@"], "http:lainchan:thread")
-        self.assertEqual(r[1]["t"], "The Sticky: /λ/ 2.0")
-
-        self.assertEqual(r[1]["title"], "The Sticky: /λ/ 2.0")
-        self.assertEqual(r[1]["board"], "%CE%BB")
-        self.assertEqual(r[1]["replies"], 0)
-        self.assertEqual(r[1]["files"], 1)
-        self.assertEqual(
-            r[1]["post"],
-            ("This is new /λ/, also addressable as /lambda/, the"
-             " programming board.  The intent is that this board will"
-             " be used to share and discuss programs that h...")
-        )
-
-        self.assertGreater(r[1]["_ttl"], 0)
-
-    async def test_mod_thread(self):
+    def test_mod_thread(self):
         u = "https://lainchan.org/mod.php?/%CE%A9/res/73638.html#76881"
-        r = await minutia.http.get(u)
-        self.assertEqual(r[0], "ok")
-
-        self.assertEqual(r[1]["@"], "http:html")
-        self.assertEqual(r[1]["t"], "Login")
-
-        self.assertEqual(r[1]["explicit"], 0.0)
+        with TestClient(app) as client:
+            r = client.get("/title", params={"u": u})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json()["t"], "Login")
