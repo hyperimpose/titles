@@ -18,7 +18,7 @@
 
 import re
 import xml.etree.ElementTree as ET
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import html5lib
 
@@ -39,7 +39,7 @@ async def thread(url: str, **_kwargs) -> Title | None:
         return None
 
     # Extract info from the URL
-    board = url.split("lainchan.org/")[1].split("/", 1)[0]
+    board = unquote(url.split("lainchan.org/")[1].split("/", 1)[0])
 
     url_l = url.rsplit("#", 1)
     if len(url_l) > 0:
