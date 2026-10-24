@@ -111,7 +111,6 @@ Only GET methods are provided. They return JSON values:
 
 |-----------------+--------------------------------------------+----------------------------------------------|
 | Path            | Parameters                                 | Returns                                      |
-|                 |                                            |                                              |
 |-----------------+--------------------------------------------+----------------------------------------------|
 | /title          | u: The url to retrieve the title for       | An object. See the Title class in [[./titles/common.py][common.py]]. |
 |                 | (optional) lang: An Accept-Language header |                                              |
