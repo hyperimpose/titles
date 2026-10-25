@@ -42,6 +42,6 @@ async def handler(url: str, **_kwargs) -> Title | None:
 
     irc = f"\x0300,04 ▶ \x0F: {title}"
     if channel:
-        irc += " \x0315|\x0F \x02Channel\x0F: {channel}"
+        irc += f" \x0315|\x0F \x02Channel\x0F: {channel}"
 
     return Title(t=t, irc=irc)
