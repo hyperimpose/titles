@@ -66,11 +66,9 @@ async def is_worksafe(board):
 
 @alru_cache(maxsize=1, ttl=60*60*24*14)  # 14 days
 async def get_boards():
-    global BOARDS
-
     boards_url = "https://a.4cdn.org/boards.json"
 
     r = await shared.client.get(boards_url)
     j = r.json()
 
-    BOARDS = j["boards"]
+    return j["boards"]
